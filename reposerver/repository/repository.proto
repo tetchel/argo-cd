@@ -38,6 +38,15 @@ message ManifestResponse {
     string verifyResult = 7;
 }
 
+message ListRefsRequest {
+  github.com.argoproj.argo_cd.pkg.apis.application.v1alpha1.Repository repo = 1;
+}
+
+message RefsList {
+  repeated string branches = 1;
+  repeated string tags = 2;
+}
+
 // ListAppsRequest requests a repository directory structure
 message ListAppsRequest {
     github.com.argoproj.argo_cd.pkg.apis.application.v1alpha1.Repository repo = 1;
@@ -138,6 +147,9 @@ service RepoServerService {
 
     // GenerateManifest generates manifest for application in specified repo name and revision
     rpc GenerateManifest(ManifestRequest) returns (ManifestResponse) {
+    }
+
+    rpc ListRefs(ListRefsRequest) returns (RefsList) {
     }
 
     // ListApps returns a list of apps in the repo

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -36,12 +37,19 @@ type RevisionMetadata struct {
 	Message string
 }
 
+type Refs struct {
+	Branches []string
+	Tags []string
+	// heads and remotes are also refs, but are not needed at this time.
+}
+
 // Client is a generic git client interface
 type Client interface {
 	Root() string
 	Init() error
 	Fetch() error
 	Checkout(revision string) error
+	LsRefs() (*Refs, error)
 	LsRemote(revision string) (string, error)
 	LsFiles(path string) ([]string, error)
 	LsLargeFiles() ([]string, error)
@@ -320,6 +328,46 @@ func (m *nativeGitClient) Checkout(revision string) error {
 		return err
 	}
 	return nil
+}
+
+func (m *nativeGitClient) LsRefs() (refs *Refs, err error) {
+	repo, err := git.Init(memory.NewStorage(), nil)
+	if err != nil {
+		return nil, err
+	}
+	remote, err := repo.CreateRemote(&config.RemoteConfig{
+		Name: git.DefaultRemoteName,
+		URLs: []string{m.repoURL},
+	})
+	if err != nil {
+		return nil, err
+	}
+	auth, err := newAuth(m.repoURL, m.creds)
+	if err != nil {
+		return nil, err
+	}
+	revisions, err := listRemote(remote, &git.ListOptions{Auth: auth}, m.insecure, m.creds)
+	if err != nil {
+		return nil, err
+	}
+
+	refs = &Refs{
+		Branches: []string{},
+		Tags: []string{},
+	}
+
+	for _, revision := range revisions {
+		if revision.Name().IsBranch() {
+			refs.Branches = append(refs.Branches, revision.Name().Short())
+		} else if revision.Name().IsTag() {
+			refs.Tags = append(refs.Tags, revision.Name().Short())
+		}
+	}
+
+	sort.Strings(refs.Branches)
+	sort.Strings(refs.Tags)
+
+	return refs, nil
 }
 
 // LsRemote resolves the commit SHA of a specific branch, tag, or HEAD. If the supplied revision

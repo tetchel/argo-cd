@@ -98,6 +98,30 @@ func NewService(metricsServer *metrics.MetricsServer, cache *reposervercache.Cac
 	}
 }
 
+func (s *Service) ListRefs(ctx context.Context, q *apiclient.ListRefsRequest) (*apiclient.RefsList, error) {
+	gitClient, err := s.newClient(q.Repo)
+	if err != nil {
+		return nil, err
+	}
+
+	s.metricsServer.IncPendingRepoRequest(q.Repo.Repo)
+	defer s.metricsServer.DecPendingRepoRequest(q.Repo.Repo)
+
+	//s.repoLock.Lock(gitClient.Root())
+
+	refs, err := gitClient.LsRefs()
+	if err != nil {
+		return nil, err
+	}
+
+	res := apiclient.RefsList{
+		Branches: refs.Branches,
+		Tags: refs.Tags,
+	}
+
+	return &res, nil
+}
+
 // ListApps lists the contents of a GitHub repo
 func (s *Service) ListApps(ctx context.Context, q *apiclient.ListAppsRequest) (*apiclient.AppList, error) {
 	gitClient, commitSHA, err := s.newClientResolveRevision(q.Repo, q.Revision)

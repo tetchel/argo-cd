@@ -153,6 +153,32 @@ func (s *Server) ListRepositories(ctx context.Context, q *repositorypkg.RepoQuer
 	return &appsv1.RepositoryList{Items: items}, nil
 }
 
+func (s *Server) ListRefs(ctx context.Context, q *repositorypkg.RepoQuery) (*repositorypkg.RepoRefsResponse, error) {
+	if err := s.enf.EnforceErr(ctx.Value("claims"), rbacpolicy.ResourceRepositories, rbacpolicy.ActionGet, q.Repo); err != nil {
+		return nil, err
+	}
+	repo, err := s.db.GetRepository(ctx, q.Repo)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, repoClient, err := s.repoClientset.NewRepoServerClient()
+	if err != nil {
+		return nil, err
+	}
+	defer io.Close(conn)
+
+	refs, err := repoClient.ListRefs(ctx, &apiclient.ListRefsRequest{
+		Repo: repo,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &repositorypkg.RepoRefsResponse{RefsList: refs}, nil
+}
+
 // ListApps returns list of apps in the repo
 func (s *Server) ListApps(ctx context.Context, q *repositorypkg.RepoAppsQuery) (*repositorypkg.RepoAppsResponse, error) {
 	if err := s.enf.EnforceErr(ctx.Value("claims"), rbacpolicy.ResourceRepositories, rbacpolicy.ActionGet, q.Repo); err != nil {

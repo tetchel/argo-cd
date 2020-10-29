@@ -3,7 +3,7 @@ option go_package = "github.com/argoproj/argo-cd/pkg/apiclient/repository";
 
 // Repository Service
 //
-// Repository Service API performs CRUD actions against repository resources 
+// Repository Service API performs CRUD actions against repository resources
 package repository;
 
 import "gogoproto/gogo.proto";
@@ -25,9 +25,18 @@ message AppInfo {
 	string path = 2;
 }
 
+message RepoRefsQuery {
+	github.com.argoproj.argo_cd.pkg.apis.application.v1alpha1.Repository repo = 1;
+}
+
 // RepoAppDetailsQuery contains query information for app details request
 message RepoAppDetailsQuery {
 	github.com.argoproj.argo_cd.pkg.apis.application.v1alpha1.ApplicationSource source = 1;
+}
+
+// RepoRefsResponse contains refs of specified repository
+message RepoRefsResponse {
+	repository.RefsList refs = 1;
 }
 
 // RepoAppsResponse contains applications of specified repository
@@ -84,7 +93,7 @@ message RepoUpdateRequest {
 }
 
 
-// RepositoryService 
+// RepositoryService
 service RepositoryService {
 
 	// List returns list of repos or repository credentials
@@ -103,7 +112,11 @@ service RepositoryService {
 		option (google.api.http).get = "/api/v1/repositories";
 	}
 
-	// ListApps returns list of apps in the repo
+	rpc ListRefs(RepoQuery) returns (RepoRefsResponse) {
+		option (google.api.http).get = "/api/v1/repositories/{repo}/refs";
+	}
+
+	// ListApps returns list of apps in the repe
 	rpc ListApps(RepoAppsQuery) returns (RepoAppsResponse) {
 		option (google.api.http).get = "/api/v1/repositories/{repo}/apps";
 	}
@@ -129,7 +142,7 @@ service RepositoryService {
 		};
 		option deprecated = true;
 	}
-	
+
 	// CreateRepository creates a new repository configuration
 	rpc CreateRepository(RepoCreateRequest) returns (github.com.argoproj.argo_cd.pkg.apis.application.v1alpha1.Repository) {
 		option (google.api.http) = {
